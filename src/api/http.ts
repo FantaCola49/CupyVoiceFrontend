@@ -6,7 +6,7 @@ export const http = axios.create({
   timeout: 20_000,
 });
 
-type JsonValue = null | boolean | number | string | JsonValue[] | { [k: string]: JsonValue };
+// type JsonValue = null | boolean | number | string | JsonValue[] | { [k: string]: JsonValue };
 
 type ProblemDetails = {
   title?: string;

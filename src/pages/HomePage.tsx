@@ -7,13 +7,13 @@ import {
   CardContent,
   CardMedia,
   CircularProgress,
-  Grid,
   Stack,
   TextField,
   Typography,
 } from "@mui/material";
-import { getSeriesList, SeriesListItemDto } from "../api/series";
+import { getSeriesList, type SeriesListItemDto } from "../api/series";
 import { toUserMessage } from "../api/http";
+import Grid from "@mui/material/Grid";
 
 export default function HomePage() {
   const [items, setItems] = useState<SeriesListItemDto[]>([]);
@@ -22,28 +22,27 @@ export default function HomePage() {
   const [query, setQuery] = useState("");
 
   useEffect(() => {
-    let alive = true;
+  const controller = new AbortController();
 
-    (async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const data = await getSeriesList();
-        if (!alive) return;
-        setItems(data);
-      } catch (e) {
-        if (!alive) return;
-        setError(toUserMessage(e));
-      } finally {
-        if (!alive) return;
-        setLoading(false);
-      }
-    })();
+  (async () => {
+    setLoading(true);
+    setError(null);
 
-    return () => {
-      alive = false;
-    };
-  }, []);
+    try {
+      const data = await getSeriesList({ signal: controller.signal });
+      setItems(data);
+    } catch (e) {
+      // если отменили — молчим
+      if (controller.signal.aborted) return;
+      setError(toUserMessage(e));
+    } finally {
+      // finally без return
+      if (!controller.signal.aborted) setLoading(false);
+    }
+  })();
+
+  return () => controller.abort();
+}, []);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -52,13 +51,32 @@ export default function HomePage() {
   }, [items, query]);
 
   return (
-    <Stack spacing={2}>
+    <Stack spacing={2.2}>
       <Box>
-        <Typography variant="h4" sx={{ fontWeight: 800 }}>
+        <Typography variant="h4" sx={{ fontWeight: 900, letterSpacing: 0.2 }}>
           Главная
         </Typography>
-        <Typography variant="body2" sx={{ opacity: 0.8 }}>
-          Список сериалов из backend: <code>GET /api/series</code>
+        <Typography variant="body2" sx={{ opacity: 0.75 }}>
+          Каталог сериалов (backend: <code>GET /api/series</code>)
+        </Typography>
+      </Box>
+
+      <Box
+        sx={{
+          borderRadius: 4,
+          overflow: "hidden",
+          p: { xs: 2, md: 3 },
+          background:
+            "linear-gradient(135deg, rgba(229,9,20,0.35), rgba(17,17,26,0.2) 40%, rgba(120,80,255,0.18))",
+          border: "1px solid rgba(255,255,255,0.08)",
+        }}
+      >
+        <Typography variant="h4" sx={{ fontWeight: 900 }}>
+          Смотри сериалы в своём стиле
+        </Typography>
+        <Typography sx={{ mt: 1, maxWidth: 780, opacity: 0.85 }}>
+          Это главная страница каталога. Дальше сделаем страницу сериала, сезоны и
+          плеер.
         </Typography>
       </Box>
 
@@ -86,20 +104,34 @@ export default function HomePage() {
       {!loading && !error && filtered.length > 0 && (
         <Grid container spacing={2}>
           {filtered.map((x) => (
-            <Grid item key={x.id} xs={12} sm={6} md={4} lg={3}>
-              <Card>
+            <Grid key={x.id} size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
+              <Card
+                sx={{
+                  borderRadius: 3,
+                  overflow: "hidden",
+                  border: "1px solid rgba(255,255,255,0.08)",
+                  transition: "transform 140ms ease, box-shadow 140ms ease",
+                  "&:hover": { transform: "translateY(-4px)" },
+                }}
+              >
                 <CardActionArea
                   onClick={() => {
-                    // пока просто заглушка: позже сделаем страницу деталей /series/:id
+                    // позже сделаем /series/:id
                     alert(`Откроем сериал позже: ${x.title}`);
                   }}
                 >
                   {x.posterUrl ? (
-                    <CardMedia component="img" height="160" image={x.posterUrl} alt={x.title} />
+                    <CardMedia
+                      component="img"
+                      height="180"
+                      image={x.posterUrl}
+                      alt={x.title}
+                      sx={{ filter: "contrast(1.05) saturate(1.05)" }}
+                    />
                   ) : (
                     <Box
                       sx={{
-                        height: 160,
+                        height: 180,
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
@@ -113,7 +145,7 @@ export default function HomePage() {
                   )}
 
                   <CardContent>
-                    <Typography variant="h6" sx={{ fontWeight: 700 }} noWrap>
+                    <Typography variant="h6" sx={{ fontWeight: 800 }} noWrap>
                       {x.title}
                     </Typography>
                     <Typography variant="body2" sx={{ opacity: 0.8 }}>

@@ -7,7 +7,7 @@ export type SeriesListItemDto = {
   posterUrl?: string | null;
 };
 
-export async function getSeriesList(): Promise<SeriesListItemDto[]> {
-  const res = await http.get<SeriesListItemDto[]>("/api/series");
+export async function getSeriesList(opts?: {signal?: AbortSignal}): Promise<SeriesListItemDto[]> {
+  const res = await http.get<SeriesListItemDto[]>("/api/series", {signal: opts?.signal});
   return res.data;
 }
